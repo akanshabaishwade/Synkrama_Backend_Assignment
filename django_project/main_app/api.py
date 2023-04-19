@@ -1,9 +1,7 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework import viewsets
 from .models import *
 from .serializer import *
-from rest_framework import permissions
 from django.contrib.auth import logout, login
 from rest_framework import status, generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -12,8 +10,7 @@ from rest_framework.views import APIView
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
-
-
+from django.http import JsonResponse
 
 
 class RegistrationView(APIView):
@@ -23,7 +20,7 @@ class RegistrationView(APIView):
         password = request.data.get('password')
         email = request.data.get('email')
         name = request.data.get('name')
-   
+
         # create new user
         user = User.objects.create_user(username=username, password=password, email=email,
                                         name=name)
@@ -39,7 +36,6 @@ def logoutApi(request):
     return Response({'message': 'Successfully logged out.'}, status=status.HTTP_200_OK)
 
 
-
 class LoginView(ObtainAuthToken):
 
     def post(self, request, *args, **kwargs):
@@ -53,7 +49,6 @@ class LoginView(ObtainAuthToken):
             'user_id': user.pk,
             'email': user.email
         })
-
 
 
 @api_view(['POST'])
@@ -73,8 +68,43 @@ def change_passwordApi(request, username):
     return Response({'message': 'Password updated successfully.'}, status=status.HTTP_200_OK)
 
 
+@api_view(['POST'])
+def create_blog(request):
+    serializer = BlogPostSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class BlogApi(viewsets.ModelViewSet):
+
+@api_view(['GET'])
+def get_all_blog(request):
+    all_blog = Blog.objects.all().values()
+    return Response(all_blog)
+    # serializer = BlogGetSerializer(all_blog, many=True)
+    # return Response(serializer.data)
+
+
+@api_view(['GET'])
+def get_single_blog(request, blog_id):
+    blog = Blog.objects.filter(blog_id=blog_id).values()
+
+    return Response(blog)
+
+
+@api_view(['GET'])
+def get_blogs_by_author(request, author):
+    all_blog = Blog.objects.filter(author=author).values()
+    return Response(all_blog)
+
+
+class BlogUpdateApi(generics.UpdateAPIView):
     queryset = Blog.objects.all()
-    serializer_class = BlogSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = BlogPostSerializer
+
+
+def blog_delete(request, blog_id):
+    blog = Blog.objects.get(blog_id=blog_id)
+    blog.delete()
+    message = {'message': 'Post deleted successfully.'}
+    return JsonResponse(message)

@@ -40,27 +40,15 @@ class RegistrationSerializer(serializers.ModelSerializer):
     
 
 
-class ChangePasswordSerializer(serializers.Serializer):
-    new_password = serializers.CharField()
-
-    def validate_new_password(self, value):
-        try:
-            validate_password(value)
-        except ValidationError as e:
-            raise serializers.ValidationError(e)
-
-        return value
-
-    def save(self):
-        username = self.validated_data.get('username')
-        user = User.objects.get(username=username)
-        user.set_password(self.validated_data['new_password'])
-        user.save()
-        return user
-
-
-
-class BlogSerializer(serializers.Serializer):
+class BlogGetSerializer(serializers.Serializer):
+    author_name = serializers.CharField(source="author.name")
     class Meta:
         model = Blog
-        fields = "__all__"
+        fields = ['author', 'author_name', 'title', 'body']
+
+
+
+class BlogPostSerializer(serializers.Serializer):
+    class Meta:
+        model = Blog
+        fields = ['author', 'title', 'body']
