@@ -14,6 +14,8 @@ class User(AbstractUser):
     date_of_birth = models.DateField(null=True, blank=True)
     address = models.CharField(max_length=255, null=True, blank=True)
     phone_number = models.IntegerField(null=True, blank=True)
+    email = models.EmailField(null=True, blank=True)
+
     groups = models.ManyToManyField(
         "auth.Group",
         related_name="custom_user_set",
