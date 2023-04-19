@@ -7,31 +7,13 @@ from rest_framework import serializers
 
 
 class UserSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = User
         fields = ['user_id', 'username', 'name', 'date_of_birth',
                   'address', 'phone_number', 'updated_at']
+        extra_kwargs = {'password': {'write_only': True}}
 
 
-# class RegistrationSerializer(serializers.ModelSerializer):
-#     password = serializers.CharField(write_only=True)
-
-#     class Meta:
-#         model = User
-#         fields = ('username','password', 'name', 'date_of_birth',
-#                     'address', 'phone_number',)
-
-#     def create(self, validated_data):
-#         user = User.objects.create_user(
-#             username=validated_data['username'],
-#             password=validated_data['password'],
-#             name=validated_data['name'],
-#             email=validated_data['email'],
-#             date_of_birth=validated_data['date_of_birth'],
-
-#         )
-#         return user
 
 class RegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -58,27 +40,39 @@ class RegistrationSerializer(serializers.ModelSerializer):
     
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    password = serializers.CharField()
+    """
+    This serializer defines two fields for authentication:
+      * username
+      * password.
+    It will try to authenticate the user with when validated.
+    """
+    username = serializers.CharField(
+        label="Username",
+        write_only=True
+    )
+    password = serializers.CharField(
+        label="Password",
+        style={'input_type': 'password'},
+        trim_whitespace=False,
+        write_only=True
+    )
 
-    def validate(self, data):
-        email = data.get('email', None)
-        password = data.get('password', None)
+    def validate(self, attrs):
+        username = attrs.get('username')
+        password = attrs.get('password')
 
-        if email is None:
-            raise serializers.ValidationError(
-                'An email address is required to log in.')
-        if password is None:
-            raise serializers.ValidationError(
-                'A password is required to log in.')
+        if username and password:
+            user = authenticate(request=self.context.get('request'),
+                                username=username, password=password)
+            if not user:
+                msg = 'Access denied: wrong username or password.'
+                raise serializers.ValidationError(msg, code='authorization')
+        else:
+            msg = 'Both "username" and "password" are required.'
+            raise serializers.ValidationError(msg, code='authorization')
+        attrs['user'] = user
+        return attrs
 
-        user = authenticate(username=email, password=password)
-
-        if user is None:
-            raise serializers.ValidationError('Invalid login credentials.')
-
-        data['user'] = user
-        return data
 
 
 class ChangePasswordSerializer(serializers.Serializer):

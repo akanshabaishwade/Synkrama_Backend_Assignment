@@ -4,44 +4,73 @@ from rest_framework import viewsets
 from .models import *
 from .serializer import *
 from rest_framework import permissions
-from django.contrib.auth import logout
-from rest_framework import status
+from django.contrib.auth import logout, login
+from rest_framework import status, generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.authtoken.models import Token
-from rest_framework import generics
+from rest_framework.views import APIView
+from django.core.exceptions import ObjectDoesNotExist
 
 
 
 
-class RegisterApi(generics.GenericAPIView):
-    serializer_class = RegistrationSerializer
-    def post(self, request, *args,  **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-        return Response({
-            "user": UserSerializer(user, context=self.get_serializer_context()).data,
-            "message": "User Created Successfully.  Now perform Login to get your token",
-        })
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def loginApi(request):
-    serializer = LoginSerializer(data=request.data)
-    if serializer.is_valid():
-        username = serializer.validated_data['username']
-        token, _ = Token.objects.get_or_create(user=username)
-        return Response({'token': token.key}, status=status.HTTP_200_OK)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+class LoginView(APIView):
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+
+        try:
+            user = User.objects.get(username=username, password=password)
+        except ObjectDoesNotExist:
+            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        return Response({'message': 'Login successful'})
+
+
+
+class RegistrationView(APIView):
+    def post(self, request):
+        # get user input
+        username = request.data.get('username')
+        password = request.data.get('password')
+        email = request.data.get('email')
+        name = request.data.get('name')
+   
+        # create new user
+        user = User.objects.create_user(username=username, password=password, email=email,
+                                        name=name)
+
+        # return success message
+        return Response({'message': 'User created successfully'})
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logoutApi(request):
-    request.user.auth_token.delete()
     logout(request)
     return Response({'message': 'Successfully logged out.'}, status=status.HTTP_200_OK)
+
+
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.authtoken.models import Token
+from rest_framework.response import Response
+
+class CustomAuthToken(ObtainAuthToken):
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data,
+                                           context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']
+        token, created = Token.objects.get_or_create(user=user)
+        return Response({
+            'token': token.key,
+            'user_id': user.pk,
+            'email': user.email
+        })
+
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
