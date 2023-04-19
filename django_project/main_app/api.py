@@ -9,23 +9,9 @@ from rest_framework import status, generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.core.exceptions import ObjectDoesNotExist
-
-
-
-
-
-class LoginView(APIView):
-    def post(self, request):
-        username = request.data.get('username')
-        password = request.data.get('password')
-
-        try:
-            user = User.objects.get(username=username, password=password)
-        except ObjectDoesNotExist:
-            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-
-        return Response({'message': 'Login successful'})
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.authtoken.models import Token
+from rest_framework.response import Response
 
 
 
@@ -52,11 +38,8 @@ def logoutApi(request):
     return Response({'message': 'Successfully logged out.'}, status=status.HTTP_200_OK)
 
 
-from rest_framework.authtoken.views import ObtainAuthToken
-from rest_framework.authtoken.models import Token
-from rest_framework.response import Response
 
-class CustomAuthToken(ObtainAuthToken):
+class LoginView(ObtainAuthToken):
 
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data,
