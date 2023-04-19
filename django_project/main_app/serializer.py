@@ -39,44 +39,8 @@ class RegistrationSerializer(serializers.ModelSerializer):
         return value
     
 
-class LoginSerializer(serializers.Serializer):
-    """
-    This serializer defines two fields for authentication:
-      * username
-      * password.
-    It will try to authenticate the user with when validated.
-    """
-    username = serializers.CharField(
-        label="Username",
-        write_only=True
-    )
-    password = serializers.CharField(
-        label="Password",
-        style={'input_type': 'password'},
-        trim_whitespace=False,
-        write_only=True
-    )
-
-    def validate(self, attrs):
-        username = attrs.get('username')
-        password = attrs.get('password')
-
-        if username and password:
-            user = authenticate(request=self.context.get('request'),
-                                username=username, password=password)
-            if not user:
-                msg = 'Access denied: wrong username or password.'
-                raise serializers.ValidationError(msg, code='authorization')
-        else:
-            msg = 'Both "username" and "password" are required.'
-            raise serializers.ValidationError(msg, code='authorization')
-        attrs['user'] = user
-        return attrs
-
-
 
 class ChangePasswordSerializer(serializers.Serializer):
-    old_password = serializers.CharField()
     new_password = serializers.CharField()
 
     def validate_new_password(self, value):
@@ -86,6 +50,14 @@ class ChangePasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError(e)
 
         return value
+
+    def save(self):
+        username = self.validated_data.get('username')
+        user = User.objects.get(username=username)
+        user.set_password(self.validated_data['new_password'])
+        user.save()
+        return user
+
 
 
 class BlogSerializer(serializers.Serializer):

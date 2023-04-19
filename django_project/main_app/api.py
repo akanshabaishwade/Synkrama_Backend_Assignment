@@ -15,6 +15,7 @@ from rest_framework.response import Response
 
 
 
+
 class RegistrationView(APIView):
     def post(self, request):
         # get user input
@@ -56,17 +57,21 @@ class LoginView(ObtainAuthToken):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def change_passwordApi(request):
-    serializer = ChangePasswordSerializer(data=request.data)
-    if serializer.is_valid():
-        user = request.user
-        if not user.check_password(serializer.data.get('old_password')):
-            return Response({'old_password': ['Wrong password.']}, status=status.HTTP_400_BAD_REQUEST)
-        user.set_password(serializer.data.get('new_password'))
-        user.save()
-        return Response({'message': 'Password updated successfully.'}, status=status.HTTP_200_OK)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+def change_passwordApi(request, username):
+    try:
+        user = User.objects.get(username=username)
+    except User.DoesNotExist:
+        return Response({'message': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    new_password = request.data.get('new_password')
+    if not new_password:
+        return Response({'message': 'New password is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(new_password)
+    user.save()
+
+    return Response({'message': 'Password updated successfully.'}, status=status.HTTP_200_OK)
+
 
 
 class BlogApi(viewsets.ModelViewSet):
