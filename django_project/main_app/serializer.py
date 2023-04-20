@@ -3,7 +3,6 @@ from django.contrib.auth import authenticate
 from .models import *
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from rest_framework import serializers
 
 
 class UserSerializer(serializers.ModelSerializer):
